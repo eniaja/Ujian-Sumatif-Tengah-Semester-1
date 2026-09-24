@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sumatif Tengah Semester 1</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      min-height: 100vh;
+      color: #333;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      user-select: none;
+    }
+    .card-custom {
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+      background: #ffffff;
+    }
+    .header-bar {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .timer-badge {
+      font-size: 1.1rem;
+      font-weight: bold;
+      background: #dc2626;
+      color: white;
+      padding: 6px 14px;
+      border-radius: 8px;
+    }
+    .option-btn {
+      text-align: left;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .option-btn:hover { background-color: #f1f5f9; }
+    .option-btn.active { border-color: #2563eb; background-color: #eff6ff; }
+    .lock-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.98);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body class="d-flex align-items-center justify-content-center p-2">
+
+<div class="container my-auto" style="max-width: 750px;">
+
+  <!-- MODAL / OVERLAY PENGUNCIAN (PASSWORD HANYA DIKETAHUI ADMIN) -->
+  <div id="lockScreen" class="lock-overlay d-none">
+    <div class="card card-custom p-4 text-center text-dark" style="max-width: 420px; width: 90%;">
+      <div class="text-danger mb-2"><i class="fa-solid fa-lock fa-4x"></i></div>
+      <h4 class="fw-bold">Ujian Terkunci!</h4>
+      <p class="text-muted small mb-3">Sistem mendeteksi Anda keluar dari halaman ujian atau berpindah tab. **Hubungi Pengawas/Admin** untuk memasukkan password pembuka kunci.</p>
+      
+      <div class="mb-3 text-start">
+        <label class="form-label small fw-bold text-secondary">Password Pengawas/Admin</label>
+        <input type="password" id="adminPassInput" class="form-control form-control-lg text-center fw-bold" placeholder="• • • • • •">
+      </div>
+      
+      <button onclick="unlockExam()" id="btnUnlock" class="btn btn-danger w-100 fw-bold py-2">BUKA KEMBALI UJIAN</button>
+    </div>
+  </div>
+
+  <!-- SECTION 1: LOGIN SISWA -->
+  <div id="loginSection" class="card card-custom p-4 text-center">
+    <h3 class="fw-bold mb-2 text-primary"><i class="fa-solid fa-pen-to-square"></i> Sumatif Tengah Semester 1</h3>
+    <p class="text-muted mb-4">Mata Pelajaran : Informatika Kelas X</p>
+    <div class="mb-3 text-start">
+      <label class="form-label fw-semibold">Nama Lengkap Siswa</label>
+      <input type="text" id="studentName" class="form-control form-control-lg" placeholder="Contoh: Eni Yulianti Nahampun">
+    </div>
+    <div class="mb-4 text-start">
+      <label class="form-label fw-semibold">Password Ujian</label>
+      <input type="password" id="studentPass" class="form-control form-control-lg" placeholder="Masukkan password ()">
+    </div>
+    <button onclick="checkLogin()" class="btn btn-primary btn-lg w-100 fw-bold">MASUK</button>
+  </div>
+
+  <!-- SECTION 2: PETUNJUK -->
+  <div id="instructionsSection" class="card card-custom p-4 d-none">
+    <h4 class="fw-bold text-dark border-bottom pb-2"><i class="fa-solid fa-circle-info text-info"></i> Petunjuk Ujian</h4>
+    <ul class="mt-3 text-start lh-lg text-secondary">
+      <li>Waktu pengerjaan adalah <strong>120 menit</strong>.</li>
+      <li>Tampilan terdiri dari 1 soal per halaman.</li>
+      <li><strong class="text-danger">DILARANG BERPINDAH TAB / APLIKASI:</strong> Jika berpindah tab, layar ujian akan <strong>terkunci otomatis</strong> dan hanya dapat dibuka oleh Pengawas/Admin.</li>
+    </ul>
+    <button onclick="startExam()" class="btn btn-success btn-lg w-100 fw-bold mt-2">MULAI UJIAN</button>
+  </div>
+
+  <!-- SECTION 3: LEMBAR SOAL -->
+  <div id="examSection" class="card card-custom p-4 d-none">
+    <div class="header-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <h6 class="m-0 fw-bold text-warning" id="displayStudentName">Nama Siswa</h6>
+        <small class="text-light">Lembar Soal Ujian</small>
+      </div>
+      <div class="timer-badge" id="timerDisplay"><i class="fa-regular fa-clock"></i> 60:00</div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <span class="badge bg-secondary fs-6" id="questionCounter">Soal 1 / 0</span>
+    </div>
+
+    <div id="questionBox" class="mb-4">
+      <p id="questionText" class="fs-5 fw-semibold mb-3 text-dark"></p>
+      <div id="optionsContainer"></div>
+    </div>
+
+    <div class="d-flex justify-content-between gap-2 border-top pt-3">
+      <button id="btnPrev" onclick="prevQuestion()" class="btn btn-outline-secondary px-4"><i class="fa-solid fa-arrow-left"></i> Sebelumnya</button>
+      <button id="btnNext" onclick="nextQuestion()" class="btn btn-primary px-4">Berikutnya <i class="fa-solid fa-arrow-right"></i></button>
+      <button id="btnSubmit" onclick="finishExam('Selesai Tepat Waktu')" class="btn btn-danger px-4 d-none">SELESAI & KIRIM</button>
+    </div>
+  </div>
+
+  <!-- SECTION 4: HASIL / TERKIRIM -->
+  <div id="resultSection" class="card card-custom p-4 text-center d-none">
+    <div class="mb-3 text-success">
+      <i class="fa-solid fa-circle-check fa-5x"></i>
+    </div>
+    <h3 class="fw-bold">Ujian Telah Selesai</h3>
+    <p class="text-muted">Jawaban dan pendataan Anda telah berhasil dikirim ke sistem.</p>
+  </div>
+
+</div>
+
+<script>
+  // BANK SOAL
+  const questions = [
+    {
+      id: 1,
+      type: "tf",
+      text: "Seorang siswa membuat Google Form untuk mengetahui kebiasaan belajar teman sekelasnya. Agar data mudah dianalisis, ia menggunakan pertanyaan pilihan ganda untuk data yang memiliki kategori jelas.",
+      options: ["Benar [A]", "Salah [B]"]
+    },
+    {
+      id: 2,
+      type: "BS",
+      text: "Dalam Google Form, seorang siswa membuat pertanyaan: “Apakah kamu setuju bahwa penggunaan internet sangat bermanfaat bagi siswa?” Ia menganggap pertanyaan tersebut sudah objektif karena memberikan pilihan “Ya” dan “Tidak”. Pernyataan tersebut benar karena semua pertanyaan dengan pilihan Ya/Tidak pasti bersifat netral.",
+      options: ["Benar [A]", "Salah [B]"]
+    },
+    {
+      id: 3,
+      type: "BS",
+      text: "Hasil Google Form menunjukkan bahwa 70% siswa menggunakan internet lebih dari 5 jam sehari. Data tersebut kemudian ditampilkan dalam Data Studio dalam bentuk diagram. Dapat disimpulkan bahwa penggunaan internet lebih dari 5 jam pasti menyebabkan nilai siswa menurun.",
+      options: ["Benar [A]", "Salah [B]"]
+    },
+    {
+      id: 4,
+      type: "BS",
+      text: "Sebuah kelompok membuat dashboard Data Studio dengan terlalu banyak grafik, warna, dan informasi yang tidak berkaitan dengan tujuan survei. Mengurangi visualisasi yang tidak diperlukan dan memilih grafik yang sesuai dengan jenis data dapat membuat dashboard lebih mudah dipahami.",
+      options: ["Benar [A]", "Salah [B]"]
+    },
+    {
+      id: 5,
+      type: "BS",
+      text: "Setelah data dari Google Form dihubungkan ke Data Studio, siswa menemukan beberapa jawaban kosong dan data yang tidak sesuai. Data tersebut sebaiknya langsung dimasukkan ke dalam dashboard tanpa diperiksa karena Data Studio akan otomatis memperbaiki semua kesalahan data.",
+      options: ["Benar [A]", "Salah [B]"]
+    },
+    {
+      id: 6,
+      type: "PG",
+      text: "Andi mendapat tugas mencari informasi tentang dampak kecanduan media sosial terhadap konsentrasi belajar siswa SMA. Hasil pencarian awal terlalu banyak dan tidak relevan. Strategi yang paling tepat adalah ....",
+      options: [
+        "A. Menggunakan kata kunci media social",
+        "B. Menggunakan frasa dampak media sosial terhadap konsentrasi belajar siswa SMA",
+        "C. Menggunakan kata kunci internet",
+        "D. Menambahkan kata kunci yang lebih spesifik sesuai topik",
+        "E. Memilih hasil pertama tanpa memeriksa isinya"
+      ]
+    },
+    {
+      id: 7,
+      type: "PG",
+      text: "Siti menemukan dua sumber mengenai perubahan iklim. Sumber pertama adalah blog pribadi tanpa referensi, sedangkan sumber kedua diterbitkan oleh lembaga penelitian dan mencantumkan data serta referensi. Tindakan yang paling tepat adalah ....",
+      options: [
+        "A. Memilih blog karena bahasanya lebih mudah dipahami",
+        "B. Memilih sumber yang muncul paling atas di Google",
+        "C. Memeriksa kredibilitas lembaga yang menerbitkan sumber kedua",
+        "D. Membandingkan informasi dengan sumber terpercaya lainnya",
+        "E. Menggunakan kedua sumber tanpa melakukan pengecekan"
+      ]
+    },
+    {
+      id: 8,
+      type: "PG",
+      text: "Sebuah situs sekolah baru saja membuat halaman berisi materi Informatika. Beberapa waktu kemudian, halaman tersebut dapat ditemukan melalui Google. Berdasarkan cara kerja mesin pencari, proses yang kemungkinan terjadi adalah ...",
+      options: [
+        "A. Googlebot menemukan dan menjelajahi halaman tersebut",
+        "B. Informasi halaman diproses untuk kemungkinan dimasukkan ke indeks",
+        "C. Google mengubah isi halaman agar sesuai dengan pencarian siswa",
+        "D. Pengguna harus mengirimkan isi halaman kepada setiap pengguna Google",
+        "E. Google mengubah isi halaman agar sesuai dengan pencarian siswa"
+      ]
+    },
+    {
+      id: 9,
+      type: "PG",
+      text: "Guru menjelaskan bahwa Google tidak perlu membaca seluruh halaman web dari awal setiap kali pengguna melakukan pencarian. Hal ini berkaitan dengan proses indexing. Pernyataan yang paling tepat adalah ....",
+      options: [
+        "A. Google menyimpan dan mengorganisasi informasi yang ditemukan dalam indeks",
+        "B. Google berisi seluruh informasi di internet tanpa terkecuali",
+        "C. Indeks membantu Google menemukan informasi yang relevan dengan pencarian",
+        "D. Indeks hanya berisi situs web milik Google",
+        "E. Indeks digunakan untuk menghapus halaman web yang tidak popular"
+      ]
+    },
+    {
+      id: 10,
+      type: "PG",
+      text: "Rina membutuhkan modul Informatika kelas X dalam format PDF dari situs resmi sekolah atau lembaga pendidikan. Pencarian yang paling efektif adalah ....",
+      options: [
+        "A. Google menyimpan dan mengorganisasi informasi yang ditemukan dalam indeks",
+        "B. Google berisi seluruh informasi di internet tanpa terkecuali",
+        "C. Indeks membantu Google menemukan informasi yang relevan dengan pencarian",
+        "D. Indeks hanya berisi situs web milik Google",
+        "E. Indeks digunakan untuk menghapus halaman web yang tidak popular"
+      ]
+    },
+    {
+      id: 11,
+      type: "PG",
+      text: "Budi mencari informasi tentang manfaat AI dalam pendidikan. Ia menemukan artikel yang menarik, tetapi artikel tersebut tidak mencantumkan penulis, tanggal publikasi, atau sumber data. Sikap kritis yang sebaiknya dilakukan Budi adalah .... ",
+      options: [
+        "A. Langsung menggunakan artikel karena muncul di Google",
+        "B. Memeriksa informasi serupa dari sumber yang kredibel",
+        "C. Menganggap informasi benar karena memiliki banyak gambar",
+        "D. Memeriksa identitas penulis dan sumber informasi",
+        "E. Membagikan artikel kepada teman sebelum memeriksanya"
+      ]
+    },
+    {
+      id: 12,
+      type: "PG",
+      text: "Ketika melakukan pencarian, Google menampilkan beberapa halaman pada urutan teratas. Seorang siswa menyimpulkan bahwa halaman pertama pasti merupakan sumber yang paling benar. Kesimpulan tersebut kurang tepat karena ....",
+      options: [
+        "A. Google menggunakan berbagai sistem untuk menentukan relevansi hasil",
+        "B. Semua hasil pencarian Google telah diverifikasi kebenarannya oleh Google",
+        "C. Urutan hasil tidak selalu berarti informasi tersebut paling benar untuk semua kebutuhan",
+        "D. Hasil pencarian pertama selalu merupakan sumber resmi",
+        "E. Google hanya menampilkan halaman yang dibuat oleh pemerintah"
+      ]
+    },
+    {
+      id: 13,
+      type: "PG",
+      text: "Dewi mencari informasi dengan kata kunci energi dan mendapatkan jutaan hasil yang terlalu luas. Ia sebenarnya membutuhkan informasi tentang energi terbarukan di Indonesia untuk tugas sekolah. Perbaikan strategi pencarian yang tepat adalah ...",
+      options: [
+        "A. Menggunakan kata kunci energi berulang-ulang",
+        "B. Menggunakan kata kunci energi terbarukan Indonesia",
+        "C. Menambahkan kata kunci yang sesuai dengan konteks tugas",
+        "D. Menghapus kata energi dari pencarian",
+        "E. Memilih hasil secara acak agar lebih cepat"
+      ]
+    },
+    {
+      id: 14,
+      type: "PG",
+      text: "Fajar menemukan artikel dengan judul Rahasia Mendapat Nilai 100 Tanpa Belajar Dijamin 100% Berhasil Artikel tersebut tidak mencantumkan bukti penelitian. Langkah yang paling tepat adalah .... ",
+      options: [
+        "A. Mempercayainya karena judulnya meyakinkan",
+        "B. Memeriksa klaim tersebut melalui sumber pendidikan yang kredibel",
+        "C. Membagikannya karena informasinya menarik",
+        "D. Membandingkan klaim dengan penelitian atau sumber terpercaya",
+        "E. Menganggapnya benar karena muncul dalam hasil Google"
+      ]
+    },
+    {
+      id: 15,
+      type: "PG",
+      text: "Perhatikan proses pencarian berikut: Pengguna memasukkan kata kunci lalu Google memproses permintaan lalu Google menemukanhasil yang relevan kemudian hasil ditampilkan kepada pengguna Berdasarkan proses tersebut pernyataan yang paling tepat adalah .... ",
+      options: [
+        "A. Google menggunakan informasi yang telah diorganisasi dalam indeks untuk membantu pencarian",
+        "B. Google harus membaca seluruh internet secara real-time setiap kali pengguna mencari sesuatu",
+        "C. Sistem Google mempertimbangkan relevansi untuk menentukan hasil yang ditampilkan",
+        "D. Semua halaman web pasti ditampilkan dalam setiap pencarian",
+        "E. Google hanya mencari berdasarkan jumlah kata dalam halaman web"
+      ]
+    },
+    {
+      id: 16,
+      type: "PG",
+      text: "Raka menemukan sebuah berita di media sosial yang menyatakan bahwa sekolah akan menerapkan aturan baru. Berita tersebut banyak dibagikan, tetapi tidak mencantumkan sumber resmi. Sikap yang menunjukkan kompetensi literasi digital adalah ....",
+      options: [
+        "A. Langsung membagikan berita karena sudah banyak yang membagikannya",
+        "B. Memeriksa informasi tersebut melalui situs atau akun resmi sekolah",
+        "C. Membandingkan berita dengan sumber terpercaya lainnya",
+        "D. Menganggap berita benar karena menggunakan bahasa yang meyakinkan",
+        "E. Menghapus berita tanpa melakukan pemeriksaan"
+      ]
+    },
+    {
+      id: 17,
+      type: "PG",
+      text: "Dalam sebuah grup kelas, seorang siswa mengunggah foto temannya tanpa izin dan foto tersebut kemudian menjadi bahan candaan. Tindakan yang paling mencerminkan budaya digital yang bertanggung jawab adalah ....",
+      options: [
+        "A. Ikut memberikan komentar agar suasana semakin ramai",
+        "B. Meminta agar foto tersebut dihapus karena menyangkut privasi",
+        "C. Mengingatkan anggota grup untuk menghormati privasi orang lain",
+        "D. Menyimpan foto tersebut untuk dibagikan ke grup lain",
+        "E. Membiarkan karena hanya dianggap sebagai candaan"
+      ]
+    },
+    {
+      id: 18,
+      type: "PG",
+      text: "Sinta menggunakan komputer sekolah untuk mengakses akun pribadinya. Setelah selesai, ia meninggalkan komputer tanpa melakukan logout. Jika dikaitkan dengan tanggung jawab digital, tindakan yang seharusnya dilakukan adalah ....",
+      options: [
+        "A. Melakukan logout dari akun setelah selesai digunakan",
+        "B. Membagikan kata sandi kepada teman agar akun mudah diakses",
+        "C. Menjaga keamanan informasi dan akun pribadi",
+        "D. Menyimpan kata sandi pada komputer umum",
+        "E. Membiarkan akun tetap terbuka karena komputer berada di sekolah"
+      ]
+    },
+    {
+      id: 19,
+      type: "PG",
+      text: "Dalam diskusi kelas melalui grup chat, pendapat Andi berbeda dengan pendapat mayoritas anggota. Beberapa siswa mulai memberikan komentar yang merendahkan. Sebagai anggota kelompok yang menerapkan etika komunikasi digital, tindakan yang tepat adalah ....",
+      options: [
+        "A. Menanggapi pendapat dengan bahasa yang sopan",
+        "B. Menyerang pribadi siswa yang memiliki pendapat berbeda",
+        "C. Menyampaikan alasan berdasarkan fakta dan argumen yang relevan",
+        "D. Mengeluarkan anggota yang berbeda pendapat dari grup",
+        "E. Menggunakan kata-kata kasar agar pendapatnya diterima"
+      ]
+    },
+    {
+      id: 20,
+      type: "PG",
+      text: "Kelompok B mendapat tugas membuat presentasi bersama. Salah satu anggota tidak mengerjakan bagian tugasnya karena mengalami kesulitan memahami materi. Sikap yang paling tepat adalah ....",
+      options: [
+        "A. Membantu menjelaskan bagian yang belum dipahami",
+        "B. Langsung mengeluarkan anggota tersebut dari kelompok",
+        "C. Membagi tugas sesuai kemampuan dan kesepakatan kelompok",
+        "D. Membiarkan anggota tersebut tanpa bantuan",
+        "E. Mengambil alih semua tugas tanpa berdiskusi"
+      ]
+    },
+    {
+      id: 21,
+      type: "PG",
+      text: "Kelompok siswa menggunakan AI untuk membantu membuat rancangan artikel tentang lingkungan. Agar penggunaan AI tetap bertanggung jawab, tindakan yang tepat adalah ....",
+      options: [
+        "A. Memeriksa kembali fakta dan informasi yang diberikan AI",
+        "B. Menganggap semua jawaban AI pasti benar",
+        "C. Menggunakan AI sebagai alat bantu dan tetap melakukan pengembangan ide sendiri",
+        "D. Menyalin seluruh jawaban AI dan mengakuinya sebagai karya pribadi",
+        "E. Mengabaikan kemungkinan kesalahan informasi dari AI"
+      ]
+    },
+    {
+      id: 22,
+      type: "PG",
+      text: "Dina menggunakan AI untuk membantu membuat gambar yang akan digunakan dalam poster sekolah. Ia menemukan bahwa AI menghasilkan gambar yang sangat mirip dengan karya seorang seniman. Sikap yang paling bertanggung jawab adalah ....",
+      options: [
+        "A. Memeriksa aspek hak cipta dan penggunaan karya tersebut",
+        "B. Langsung mengklaim gambar sebagai karya asli tanpa pertimbangan",
+        "C. Mempertimbangkan penggunaan alternatif yang lebih aman dan etis",
+        "D. Menjual gambar tersebut karena dibuat menggunakan AI",
+        "E. Menghapus nama pembuat asli jika diketahui"
+      ]
+    },
+    {
+      id: 23,
+      type: "PG",
+      text: "Guru meminta siswa menggunakan AI untuk membantu menganalisis hasil survei kelas. Data survei berisi nama lengkap, nomor telepon, dan alamat siswa. Sebelum memasukkan data tersebut ke layanan AI, tindakan yang paling tepat adalah ....",
+      options: [
+        "A. Memastikan data pribadi yang tidak diperlukan dihilangkan atau disamarkan",
+        "B. Memasukkan seluruh data karena AI dapat menyimpan semuanya dengan aman",
+        "C. Mempertimbangkan privasi dan keamanan data sebelum menggunakan AI",
+        "D. Mengunggah data tanpa meminta pertimbangan pihak terkait",
+        "E. Mengunggah data tanpa meminta pertimbangan pihak terkait"
+      ]
+    },
+    {
+      id: 24,
+      type: "PG",
+      text: "Dalam membuat makalah, kelompok B menggunakan AI untuk menghasilkan ide awal. Setelah itu, anggota kelompok menemukan beberapa informasi yang tidak sesuai dengan sumber terpercaya. Sikap yang menunjukkan kemampuan berpikir kritis dan tanggung jawab digital adalah  ....",
+      options: [
+        "A. Memeriksa dan memperbaiki informasi yang keliru",
+        "B. Tetap menggunakan semua informasi karena dihasilkan oleh AI",
+        "C. Menggunakan sumber terpercaya untuk memverifikasi informasi",
+        "D. Menghapus seluruh makalah dan tidak menggunakan AI lagi",
+        "E. Menyalahkan AI atas kesalahan tanpa melakukan perbaikan"
+      ]
+    },
+    {
+      id: 25,
+      type: "PG",
+      text: "Sekolah sedang membangun budaya digital yang positif. Dalam kegiatan proyek, siswa menggunakan media sosial, aplikasi kolaborasi, dan AI. Perilaku yang paling mencerminkan budaya digital yang bertanggung jawab adalah ....",
+      options: [
+        "A. Menghargai privasi, hak cipta, dan pendapat orang lain",
+        "B. Menggunakan teknologi secara bebas tanpa memperhatikan dampaknya",
+        "C. Memeriksa informasi sebelum menyebarkannya dan menggunakan AI secara etis",
+        "D. Membagikan semua informasi pribadi agar kolaborasi lebih mudah",
+        "E. Menganggap teknologi selalu benar dan tidak perlu dikritisi"
+      ]
+    },
+    {
+      id: 26,
+      type: "PG",
+      text: "Sekolah sedang membangun budaya digital yang positif. Dalam kegiatan proyek, siswa menggunakan media sosial, aplikasi kolaborasi, dan AI. Perilaku yang paling mencerminkan budaya digital yang bertanggung jawab adalah ....",
+      options: [
+        "A. Siapa nama lengkap siswa?",
+        "B. Apa jenis transportasi yang paling sering kamu gunakan ke sekolah?",
+        "C. Berapa nilai rata-rata rapormu?",
+        "D. Pilih jenis transportasi yang kamu gunakan: Sepeda, Motor, Mobil, Angkutan Umum, atau Berjalan Kaki",
+        "E. Mengapa kamu tidak menggunakan kendaraan pribadi?"
+      ]
+    },
+    {
+      id: 27,
+      type: "PG",
+      text: "Guru ingin mengetahui durasi penggunaan internet siswa setiap hari. Agar data yang dikumpulkan mudah dianalisis, rancangan pertanyaan yang tepat adalah ....",
+      options: [
+        "A. Berapa jam kamu menggunakan internet dalam sehari?",
+        "B. Apakah internet menurutmu bagus?",
+        "C. Pilih rentang durasi penggunaan internet: <1 jam, 1–3 jam, 3–5 jam, atau >5 jam",
+        "D. Ceritakan semua kegiatanmu selama menggunakan internet",
+        "E. Apakah kamu suka internet?"
+      ]
+    },
+    {
+      id: 28,
+      type: "PG",
+      text: "Sebuah kelas ingin mengetahui apakah siswa setuju dengan program membawa bekal dari rumah. Ketua kelas membuat pertanyaan GForm: Kamu pasti setuju membawa bekal karena lebih sehat, bukan? Guru meminta pertanyaan tersebut diperbaiki karena dapat memengaruhi jawaban responden. Perbaikan yang tepat adalah .... ",
+      options: [
+        "A. Mengubah menjadi pertanyaan netral:Apakah kamu setuju dengan program membawa bekasl dari rumah ?",
+        "B. Menambahkan kata pasti agar siswa lebih mudah menjawab",
+        "C. Memberikan pilihan jawaban yang seimbang, seperti setuju, tidak setuju, dan ragu-ragu",
+        "D. Menghilangkan pilihan tidak setuju",
+        "E. Mengarahkan responden agar memilih jawaban yang diharapkan"
+      ]
+    },
+    {
+      id: 29,
+      type: "PG",
+      text: "Siswa kelas X ingin mengumpulkan data mengenai kebiasaan membaca siswa. Setelah GForm dibagikan, banyak responden tidak mengisi pertanyaan tentang jumlah buku yang dibaca setiap bulan. Agar data lebih lengkap, tindakan yang tepat adalah ....",
+      options: [
+        "A. Menjadikan pertanyaan tersebut wajib diisi jika memang diperlukan untuk analisis",
+        "B. Menghapus pertanyaan tersebut agar tidak ada data kosong",
+        "C. Memberikan instruksi yang jelas mengenai cara menjawab pertanyaan",
+        "D. Mengisi sendiri jawaban responden yang kosong",
+        "E. Menganggap semua jawaban kosong sebagai nilai nol tanpa alasan"
+      ]
+    },
+    {
+      id: 30,
+      type: "PG",
+      text: "Dalam sebuah survei GForm tentang kebiasaan belajar, seorang siswa ingin meminta nama lengkap, nomor telepon, alamat rumah, dan nomor identitas siswa, padahal data tersebut tidak diperlukan untuk analisis. Sikap yang paling tepat adalah ....",
+      options: [
+        "A. Mengumpulkan hanya data pribadi yang benar-benar diperlukan",
+        "B. Tetap meminta semua data karena semakin banyak data semakin baik",
+        "C. Tetap meminta semua data karena semakin banyak data semakin baik",
+        "D. Membagikan data responden kepada seluruh siswa",
+        "E. Mengunggah data pribadi ke media sosial agar hasil survei transparan"
+      ]
+    },
+    {
+      id: 31,
+      type: "PG",
+      text: "Setelah survei penggunaan internet dilakukan, hasil GForm menunjukkan bahwa 70% siswa menggunakan internet lebih dari 5 jam sehari, sedangkan 30% menggunakan kurang dari 5 jam. Kesimpulan yang paling tepat berdasarkan data tersebut adalah  ....",
+      options: [
+        "A. Mayoritas responden dalam survei menggunakan internet lebih dari 5 jam sehari",
+        "B. Semua siswa di Indonesia menggunakan internet lebih dari 5 jam sehari",
+        "C. Data menunjukkan kecenderungan pada kelompok responden yang diteliti",
+        "D. Penggunaan internet lebih dari 5 jam pasti menyebabkan nilai siswa rendah",
+        "E. Tidak perlu melakukan analisis lebih lanjut karena data sudah pasti benar"
+      ]
+    },
+    {
+      id: 32,
+      type: "PG",
+      text: "Guru ingin mengetahui tingkat kepuasan siswa terhadap fasilitas laboratorium komputer dengan skala 1–5. Jenis pertanyaan GForm yang paling sesuai adalah ....",
+      options: [
+        "A. Skala linear",
+        "B. Paragraf",
+        "C. Pilihan berdasarkan skala 1 sampai 5",
+        "D. Upload file",
+        "E. Jawaban singkat berupa nama siswa"
+      ]
+    },
+    {
+      id: 33,
+      type: "PG",
+      text: "Sebuah kelompok ingin mengetahui makanan favorit siswa kelas X. Mereka membagikan GForm hanya kepada lima orang teman dekatnya. Hasilnya menunjukkan bahwa sebagian besar memilih makanan yang sama. Agar data lebih representatif, tindakan yang tepat adalah....",
+      options: [
+        "A. Mengumpulkan data dari lebih banyak siswa yang sesuai dengan populasi penelitian",
+        "B. Menganggap hasil lima orang tersebut mewakili seluruh siswa",
+        "C. Menentukan responden dengan mempertimbangkan kelompok yang ingin diteliti",
+        "D. Mengubah jawaban responden agar sesuai dengan dugaan awal",
+        "E. Meminta hanya teman dekat untuk mengisi kembali GForm"
+      ]
+    },
+    {
+      id: 34,
+      type: "PG",
+      text: "Setelah GForm selesai diisi oleh 100 siswa, kelompok mendapatkan banyak data. Mereka ingin mengetahui jumlah siswa yang memilih setiap jenis ekstrakurikuler. Langkah yang paling tepat adalah ....",
+      options: [
+        "A. Mengelompokkan jawaban berdasarkan pilihan ekstrakurikuler",
+        "B. Mengubah semua jawaban menjadi satu jawaban yang sama",
+        "C. Menggunakan tabel atau grafik untuk membantu melihat distribusi data",
+        "D. Menghapus data yang jumlahnya paling sedikit",
+        "E. Menentukan hasil berdasarkan perkiraan anggota kelompok"
+      ]
+    },
+    {
+  id: 36,
+  type: "ESSAY",
+  text: "Jika sekolah ingin menentukan ekstrakurikuler yang paling banyak diminati untuk diberikan fasilitas tambahan, bagaimana Anda mengolah dan menganalisis data tersebut? Jelaskan kesimpulan yang dapat diambil berdasarkan data."
+},
+
+{
+  id: 37,
+  type: "ESSAY",
+  text: "Sebuah kelas mengumpulkan data jumlah siswa yang memilih moda transportasi ke sekolah. Data yang diperoleh adalah: sepeda 8 siswa, sepeda motor 25 siswa, mobil 7 siswa, angkutan umum 10 siswa, dan berjalan kaki 5 siswa. Jenis grafik apa yang paling tepat untuk menyajikan data tersebut? Jelaskan alasan pemilihan grafik dan bagaimana grafik tersebut dapat membantu guru memahami data dengan lebih cepat."
+},
+
+{
+  id: 38,
+  type: "ESSAY",
+  text: "Seorang siswa membuat grafik untuk menunjukkan jumlah siswa yang mengikuti ekstrakurikuler. Namun, ia menggunakan grafik garis dan tidak mencantumkan judul, nama kategori, maupun satuan jumlah siswa. Analisislah minimal tiga kesalahan dalam penyajian data tersebut. Jelaskan bagaimana Anda akan memperbaiki grafik agar informasi dapat dipahami dengan mudah."
+},
+
+{
+  id: 39,
+  type: "ESSAY",
+  text: "Sebuah grafik menunjukkan bahwa jumlah siswa yang menggunakan aplikasi belajar meningkat dari 40 siswa menjadi 80 siswa dalam satu semester. Seorang siswa menyimpulkan bahwa \"peningkatan penggunaan aplikasi belajar pasti menyebabkan nilai seluruh siswa meningkat.\" Apakah kesimpulan tersebut dapat dibenarkan hanya berdasarkan grafik? Jelaskan alasan Anda dan sebutkan data tambahan yang diperlukan agar kesimpulan tersebut dapat dianalisis dengan lebih tepat."
+},
+
+{
+  id: 40,
+  type: "ESSAY",
+  text: "Jelaskan penyajian data dalam bentuk tabel dan grafik serta sebutkan jenis-jenis tabel dan grafik!"
+},
+    {
+      id: 35,
+      type: "PG",
+      text: "Kelompok Andi membuat survei menggunakan GForm. Setelah data terkumpul, mereka menemukan beberapa responden mengisi pilihan ekstrakurikuler yang tidak tersedia dan beberapa jawaban kosong. Agar hasil penelitian lebih dapat dipercaya, tindakan yang tepat adalah ....",
+      options: [
+        "A. Mengelompokkan jawaban berdasarkan pilihan ekstrakurikuler",
+        "B. Mengubah semua jawaban menjadi satu jawaban yang sama",
+        "C. Menggunakan tabel atau grafik untuk membantu melihat distribusi data",
+        "D. Menghapus data yang jumlahnya paling sedikit",
+        "E. Menentukan hasil berdasarkan perkiraan anggota kelompok"
+      ]
+    },
+  ];
+
+  let currentIndex = 0;
+  let userAnswers = {};
+  let timerInterval = null;
+  let timeLeft = 3600;
+  let cheatingLogs = [];
+  let studentName = "";
+  let isExamActive = false;
+
+  function checkLogin() {
+    const name = document.getElementById('studentName').value.trim();
+    const pass = document.getElementById('studentPass').value.trim();
+
+    if (!name) { alert('Masukkan nama lengkap Anda!'); return; }
+    if (pass !== 'SMAGalatia123210620') { alert('Password login salah!'); return; }
+
+    studentName = name;
+    document.getElementById('displayStudentName').innerText = studentName;
+    document.getElementById('loginSection').classList.add('d-none');
+    document.getElementById('instructionsSection').classList.remove('d-none');
+  }
+
+  function startExam() {
+    document.getElementById('instructionsSection').classList.add('d-none');
+    document.getElementById('examSection').classList.remove('d-none');
+    
+    isExamActive = true;
+    openFullscreen();
+    initSecurity();
+    startTimer();
+    renderQuestion();
+  }
+
+  function startTimer() {
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      let mins = Math.floor(timeLeft / 120);
+      let secs = timeLeft % 1200;
+      document.getElementById('timerDisplay').innerHTML = `<i class="fa-regular fa-clock"></i> ${mins}:${secs < 10 ? '0' : ''}${secs}`;
+      
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        alert('Waktu pengerjaan habis!');
+        finishExam('Waktu Habis');
+      }
+    }, 1000);
+  }
+
+  function renderQuestion() {
+    const q = questions[currentIndex];
+    document.getElementById('questionCounter').innerText = `Soal ${currentIndex + 1} / ${questions.length}`;
+    document.getElementById('questionText').innerText = q.text;
+
+    const container = document.getElementById('optionsContainer');
+    container.innerHTML = '';
+
+    const selected = userAnswers[q.id];
+
+    q.options.forEach((opt, idx) => {
+      const isSelected = selected === idx;
+      const div = document.createElement('div');
+      div.className = `option-btn ${isSelected ? 'active' : ''}`;
+      div.onclick = () => {
+        userAnswers[q.id] = idx;
+        renderQuestion();
+      };
+      div.innerHTML = `<i class="${isSelected ? 'fa-solid fa-circle-check text-primary' : 'fa-regular fa-circle text-muted'} me-2"></i> ${opt}`;
+      container.appendChild(div);
+    });
+
+    document.getElementById('btnPrev').style.visibility = currentIndex === 0 ? 'hidden' : 'visible';
+    if (currentIndex === questions.length - 1) {
+      document.getElementById('btnNext').classList.add('d-none');
+      document.getElementById('btnSubmit').classList.remove('d-none');
+    } else {
+      document.getElementById('btnNext').classList.remove('d-none');
+      document.getElementById('btnSubmit').classList.add('d-none');
+    }
+  }
+
+  function nextQuestion() {
+    if (currentIndex < questions.length - 1) { currentIndex++; renderQuestion(); }
+  }
+
+  function prevQuestion() {
+    if (currentIndex > 0) { currentIndex--; renderQuestion(); }
+  }
+
+  function initSecurity() {
+    window.addEventListener('blur', () => {
+      if (isExamActive) triggerLockScreen("Berpindah Tab / Keluar Aplikasi");
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && isExamActive) triggerLockScreen("Aplikasi Minimised / Pindah Tab");
+    });
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('keydown', e => {
+      if (e.ctrlKey || e.altKey || e.key === 'F12') e.preventDefault();
+    });
+  }
+
+  function triggerLockScreen(reason) {
+    isExamActive = false;
+    const timeLog = new Date().toLocaleTimeString();
+    cheatingLogs.push(`[${timeLog}] Terkunci: ${reason}`);
+
+    // Tampilkan modal terkunci
+    document.getElementById('adminPassInput').value = "";
+    document.getElementById('lockScreen').classList.remove('d-none');
+
+    // Kirim notifikasi email ke Admin
+    google.script.run.notifyAdminCheating(studentName, reason);
+  }
+
+  function unlockExam() {
+    const inputPass = document.getElementById('adminPassInput').value.trim();
+    const btn = document.getElementById('btnUnlock');
+    btn.innerText = "Memeriksa...";
+
+    google.script.run.withSuccessHandler(function(isValid) {
+      btn.innerText = "BUKA KEMBALI UJIAN";
+      if (isValid) {
+        document.getElementById('lockScreen').classList.add('d-none');
+        isExamActive = true;
+        openFullscreen();
+      } else {
+        alert('Password Admin Salah! Akses ditolak.');
+      }
+    }).verifyAdminPassword(inputPass);
+  }
+
+  function openFullscreen() {
+    let elem = document.documentElement;
+    if (elem.requestFullscreen) elem.requestFullscreen().catch(()=>{});
+  }
+
+  function finishExam(reason) {
+    clearInterval(timerInterval);
+    isExamActive = false;
+
+    if (reason && reason !== 'Selesai Tepat Waktu') {
+      cheatingLogs.push(`Selesai karena: ${reason}`);
+    }
+
+    const payload = {
+      studentName: studentName,
+      cheatingLogs: cheatingLogs
+    };
+
+    document.getElementById('examSection').innerHTML = `<div class="text-center p-5"><div class="spinner-border text-primary"></div><p class="mt-2">Mengirim Data Ujian...</p></div>`;
+
+    google.script.run.withSuccessHandler(function() {
+      document.getElementById('examSection').classList.add('d-none');
+      document.getElementById('resultSection').classList.remove('d-none');
+    }).submitExam(payload);
+  }
+</script>
+
+</body>
+</html>
